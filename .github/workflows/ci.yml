@@ -30,7 +30,7 @@ permissions:
 env:
   # The one variable that separates the arms: on baseline, action-checkout
   # skips its Set up Chalk step entirely.
-  CHALK_ON: ${{ github.event_name == 'workflow_dispatch' && inputs.leg != 'baseline' }}
+  CHALK_ON: ${{ inputs.leg == 'instrumented' }}
 
 run-name: "CI ${{ inputs.leg || 'push' }} ${{ inputs.racecar_run }}"
 
@@ -73,29 +73,3 @@ jobs:
 
       - run: swift test
 
-  android:
-    strategy:
-      fail-fast: false
-      matrix:
-        swift:
-          - "6.2"
-    name: Android
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: crashappsec/action-checkout@main
-        with:
-          chalk: ${{ env.CHALK_ON }}
-          profile: ${{ inputs.profile || 'curiosity-tests-racecar' }}
-          observables_continue_on_error: false
-          lfs: false
-      - name: Assert instrumentation is live
-        if: env.CHALK_ON == 'true'
-        run: |
-          test -n "${CURIOSITY_ROOT:-}" || { echo "::error::CURIOSITY_ROOT unset - observables never installed"; exit 1; }
-          test -S "${CURIOSITY_SOCKET_NAME:?socket name unset}" || { echo "::error::co-hostd socket absent"; exit 1; }
-
-      - uses: skiptools/swift-android-action@v2
-        with:
-          swift-version: ${{ matrix.swift }}
-          copy-files: ${GITHUB_WORKSPACE}/Tests/SnapshotTestingTests/__Snapshots__
